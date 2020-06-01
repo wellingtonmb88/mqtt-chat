@@ -1,0 +1,88 @@
+version: '2'
+
+services:
+  mongodb:
+    image: mongo:3.6.0
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - dbvolume:/data
+      - ./init-mongo-users.sh:/docker-entrypoint-initdb.d/init-mongo-users.sh:ro
+    env_file:
+      - .env
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${DB_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${DB_PASSWORD}
+      MONGO_INITDB_USERNAME: ${DB_USERNAME}
+      MONGO_INITDB_PASSWORD: ${DB_PASSWORD}
+      MONGO_INITDB_DATABASE: ${DB_NAME}
+    networks:
+      - wellrevolution_network
+
+  mongoclient:
+    image: mongoclient/mongoclient
+    restart: always
+    ports:
+      - 8080:3000
+    depends_on:
+      - mongodb
+    networks:
+      - wellrevolution_network
+
+  mosquitto.service.com:
+    image: eclipse-mosquitto
+    container_name: mosquitto.service.com
+    expose:
+      - "1883"
+      - "9001"
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
+    networks:
+      - wellrevolution_network
+  
+  server.service.com:
+    extends: 
+      file: ./server/docker-compose.yml
+      service: server.service.com
+    env_file: .env
+    depends_on:
+      - mongodb
+      - mosquitto.service.com
+    environment:
+      DB_URL: mongodb
+      MQTT_SERVICE_HOST: mosquitto.service.com
+      MQTT_SERVICE_PORT: 1883
+    networks:
+      - wellrevolution_network
+
+  client.service.com:
+    extends: 
+      file: ./client/docker-compose.yml
+      service: client.service.com
+    depends_on:
+      - server.service.com
+    networks:
+      - wellrevolution_network
+
+  nginx:
+    image: nginx:latest
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - server.service.com
+      - client.service.com
+    ports:
+      - "80:80"
+    networks:
+      - wellrevolution_network
+
+networks:
+  wellrevolution_network:
+    driver: "bridge"
+
+volumes:
+  dbvolume: {}

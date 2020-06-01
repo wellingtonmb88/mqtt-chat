@@ -1,0 +1,19 @@
+version: '2'
+
+services:
+  server.service.com:
+    build:
+      context: .
+      dockerfile: Dockerfile 
+    image: server-service
+    container_name: server.service.com
+    restart: unless-stopped
+    env_file: .env
+    expose:
+      - "4000"
+    volumes:
+      - .:/home/node/app
+
+networks:
+  wellrevolution_network:
+    driver: "bridge"

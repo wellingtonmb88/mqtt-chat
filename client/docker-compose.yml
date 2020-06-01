@@ -1,0 +1,22 @@
+version: '2'
+
+services:
+  client.service.com:
+    stdin_open: true
+    build:
+      context: .
+      dockerfile: Dockerfile 
+    image: client-service
+    container_name: client.service.com
+    restart: unless-stopped
+    expose:
+      - "3000"
+    volumes:
+      - '.:/app'
+      - '/app/node_modules'
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+
+networks:
+  wellrevolution_network:
+    driver: "bridge"
